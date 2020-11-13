@@ -23,8 +23,8 @@ namespace GarfieldDownloader
                   date = date.AddDays(1);
                   continue;
                }
-               
-               Console.WriteLine("Pobieram {0}", url);
+
+               _logger.Debug("Downloading {0}", url);
                using (HttpResponseMessage response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead)) {
                   if (response.IsSuccessStatusCode)
                      using (Stream streamToReadFrom = await response.Content.ReadAsStreamAsync()) {
@@ -39,9 +39,10 @@ namespace GarfieldDownloader
                   }
                }
             }
-         } catch (HttpRequestException e) {
-            Console.WriteLine("\nException Caught!");
-            Console.WriteLine("Message:{0} ", e.Message);
+         } catch (HttpRequestException e1) {
+            _logger.Error(e1, "Http Request Exception");
+         } catch (Exception e2) {
+            _logger.Error(e2, "General Exception");
          }
       }
 
@@ -49,5 +50,6 @@ namespace GarfieldDownloader
       static string _baseDir = @"D:\Garfield";
       static string _baseUrl = @"http://images.ucomics.com/comics/ga/";
       static DateTime _baseDate = new DateTime(1978, 6, 19);
+      private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
    }
 }
