@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -8,13 +10,31 @@ namespace GarfieldDownloader
    class Program
    {
       static async Task Main(string[] args) {
-
-         Task[] tasks = new Task[DateTime.Now.Year - _baseDate.Year + 1];
+         List<Task> tasks = new List<Task>();
          for (int i = 0; i <= DateTime.Now.Year - _baseDate.Year; i++) {
             int year = _baseDate.Year + i;
-            tasks[i] = Task.Run(() => DownloadComic(year));
+            tasks.Add(Task.Run(() => DownloadComic(year)));
          }
-         Task.WaitAll(tasks);
+         Task.WaitAll(tasks.ToArray());
+
+         Compress();
+      }
+
+      private static void Compress() {
+         if (!Directory.Exists(_baseDirArchive))
+            Directory.CreateDirectory(_baseDirArchive);
+
+         string[] years = Directory.GetDirectories(_baseDirImg);
+         foreach (var y in years) {
+            string year = new DirectoryInfo(y).Name;
+            string[] months = Directory.GetDirectories(Path.Combine(_baseDirImg, year));
+            foreach (var m in months) {
+               string destFile = Path.Combine(_baseDirArchive, $"{year}-{new DirectoryInfo(m).Name}.zip");
+               if (!File.Exists(destFile))
+                  ZipFile.CreateFromDirectory(m, destFile);
+            }
+         _logger.Info("[{0:d2}] Finished compressing year {1}", Task.CurrentId, year);
+         }
       }
 
       private static async Task DownloadComic(int year) {
@@ -65,6 +85,7 @@ namespace GarfieldDownloader
 
       static readonly HttpClient _client = new HttpClient();
       static string _baseDirImg = @"D:\Temp\Garfield";
+      static string _baseDirArchive = @"D:\Temp\Garfield-zip";
       static string _baseUrl = @"http://images.ucomics.com/comics/ga/";
       static DateTime _baseDate = new DateTime(1978, 6, 19);
       private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
